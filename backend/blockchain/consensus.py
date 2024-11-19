@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 from .blockchain import Block # Импортируйте ваш класс Block
+import random
 
 class Consensus(ABC):
     @abstractmethod
@@ -32,18 +33,29 @@ class ProofOfWork(Consensus):
 
 
 
-class ProofOfStake(Consensus):  # Пример PoS (упрощенный)
-    def __init__(self, validators: list):
-      self.validators = validators
+class ProofOfStake(Consensus):
+    def __init__(self, validators: list[str]):
+        self.validators = validators
 
     def validate_block(self, block: Block, chain: 'Blockchain') -> bool:
         """
-        Валидирует блок, проверяя, является ли создатель блока валидатором.
-        В реальном PoS требуется более сложная логика, связанная со стейкингом,
-        выбором валидатора и т.д.
+        Упрощенная валидация Proof-of-Stake. 
+        Выбирает случайного валидатора и проверяет, создал ли он блок.  
+        В реальном PoS  логика значительно сложнее (учет стейка, 
+        ротация валидаторов, slashing conditions и т.д.)
         """
-        # Здесь должна быть логика проверки PoS (например, проверка подписи, стейка и т.д.)
-        # Этот пример просто проверяет, есть ли создатель блока в списке валидаторов
-        # Замените это вашей реальной логикой PoS
-        creator = block.transactions[0]['sender'] if block.transactions else None # предполагаем, что первая транзакция - создание блока
-        return creator in self.validators
+        if not block.transactions: # Если нет транзакций
+            return False
+
+        creator = block.transactions[0].get('sender')  # Предполагаем, что первая транзакция - создание блока
+
+
+        if creator not in self.validators:
+            return False
+
+        # Здесь должна быть более сложная логика проверки PoS
+        # Например, проверка подписи, величины стейка,  и т.д.
+        #  Этот пример -  сильно упрощенная  иллюстрация
+
+        # Имитация проверки (замените на реальную логику)
+        return random.random() < 0.8 # 80% шанс успешной валидации
