@@ -1,61 +1,43 @@
 from abc import ABC, abstractmethod
-from .blockchain import Block # Импортируйте ваш класс Block
-import random
+from .blockchain import Block, Blockchain
 
 class Consensus(ABC):
+    """Абстрактный базовый класс для алгоритмов консенсуса."""
+
     @abstractmethod
-    def validate_block(self, block: Block, chain: 'Blockchain') -> bool:
-        """
-        Валидирует блок в соответствии с правилами консенсуса.
-
-        Args:
-            block: Блок для валидации.
-            chain: Экземпляр блокчейна (для доступа к предыдущим блокам и т.д.)
-
-        Returns:
-            True, если блок валиден, False иначе.
-        """
+    def validate_block(self, block: Block, chain: Blockchain) -> bool:
+        """Валидирует блок в соответствии с правилами консенсуса."""
         pass
 
 
 class ProofOfWork(Consensus):
+    """Proof-of-Work (PoW) консенсус."""
+
     def __init__(self, difficulty: int):
         self.difficulty = difficulty
 
-    def validate_block(self, block: Block, chain: 'Blockchain') -> bool:
-        """
-        Валидирует блок, проверяя proof-of-work.
-        """
+    def validate_block(self, block: Block, chain: Blockchain) -> bool:
+        """Валидирует блок, проверяя PoW."""
         block_hash = block.compute_hash()
-        return (block_hash.startswith('0' * self.difficulty) and
-                chain.last_block.hash == block.previous_hash and  # Добавленная проверка
-                block.previous_hash == chain.get_block_by_index(block.index-1).hash if block.index > 0 else True)
+        
+        # Проверяем предыдущий хеш
+        previous_hash_matches = (block.previous_hash == chain.get_block_by_index(block.index - 1).hash if block.index > 0 else True)
+
+        # Проверяем сложность хеша
+        difficulty_check = block_hash.startswith('0' * self.difficulty)
+        
+        return difficulty_check and previous_hash_matches
+    
+    def adjust_difficulty(self, chain: Blockchain):
+        """Регулирует сложность в зависимости от времени, затраченного на добычу последнего блока."""
+        last_block = chain.last_block
+        if last_block.index > 0:
+            previous_block = chain.get_block_by_index(last_block.index - 1)
+            time_diff = last_block.timestamp - previous_block.timestamp
+            if time_diff < self.target_block_time / 2:
+                self.difficulty += 1
+            elif time_diff > self.target_block_time * 2:
+                self.difficulty -= 1 if self.difficulty > 1 else 0 # difficulty не может быть меньше 1
 
 
-
-class ProofOfStake(Consensus):
-    def __init__(self, validators: list[str]):
-        self.validators = validators
-
-    def validate_block(self, block: Block, chain: 'Blockchain') -> bool:
-        """
-        Упрощенная валидация Proof-of-Stake. 
-        Выбирает случайного валидатора и проверяет, создал ли он блок.  
-        В реальном PoS  логика значительно сложнее (учет стейка, 
-        ротация валидаторов, slashing conditions и т.д.)
-        """
-        if not block.transactions: # Если нет транзакций
-            return False
-
-        creator = block.transactions[0].get('sender')  # Предполагаем, что первая транзакция - создание блока
-
-
-        if creator not in self.validators:
-            return False
-
-        # Здесь должна быть более сложная логика проверки PoS
-        # Например, проверка подписи, величины стейка,  и т.д.
-        #  Этот пример -  сильно упрощенная  иллюстрация
-
-        # Имитация проверки (замените на реальную логику)
-        return random.random() < 0.8 # 80% шанс успешной валидации
+# class ProofOfStake(Consensus): #  и т.д. - слишком сложная и муторная херня обойдемся без неё
